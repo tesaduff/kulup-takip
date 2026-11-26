@@ -739,7 +739,7 @@ async function smoke() {
       RP.id = tr.id; RP.ogrenci = 2; raporCiz();
       if (!SON_HTML) throw new Error('rapor oluşmadı: ' + tr.id);
       log.push(`rapor ${tr.id}: ${$('#sayfa').textContent}`);
-      if (['aylikAidat', 'toplu', 'mektup', 'haftalik'].includes(tr.id)) { await bekle(900); await shot('05_rapor_' + tr.id); }
+      if (['aylikAidat', 'toplu', 'mektup', 'haftalik'].includes(tr.id)) { await bekle(900); log.push('  zoom=' + ($('#rf').contentDocument.body.style.getPropertyValue('--zoom')) + ' sayfa=' + $('#rf').contentDocument.querySelectorAll('.page').length); await shot('05_rapor_' + tr.id); }
       await api.exportExcel({ models: SON_MODELS, settings: D.settings, ad: 'test_' + tr.id, sor: false });
       if (['aylikAidat', 'aylikYoklama', 'toplu', 'mektup'].includes(tr.id)) await api.pdf({ html: SON_HTML, ad: 'test_' + tr.id, sor: false });
     }

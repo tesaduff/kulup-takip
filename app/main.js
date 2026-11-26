@@ -25,10 +25,10 @@ const guvenliAd = s => String(s).replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').slice(0,
 let win;
 function pencere() {
   win = new BrowserWindow({
-    width: 1280, height: 820, minWidth: 980, minHeight: 640, show: !SMOKE,
+    width: 1280, height: 820, minWidth: 980, minHeight: 640, show: true,
     title: 'Kulüp Takip', backgroundColor: '#f4f6fb',
     icon: path.join(__dirname, 'icon.png'),
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: false }
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: false, backgroundThrottling: !SMOKE }
   });
   Menu.setApplicationMenu(null);
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'), { query: SMOKE ? { smoke: '1' } : {} });
