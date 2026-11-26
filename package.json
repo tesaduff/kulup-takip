@@ -85,9 +85,11 @@
       "maintainer": "Kulüp Takip <tesaduff@users.noreply.github.com>",
       "synopsis": "Kulüp yoklama ve aidat takip programı",
       "desktop": {
-        "Name": "Kulüp Takip",
-        "Comment": "Kulüp yoklama ve aidat takibi",
-        "Keywords": "kulüp;yoklama;aidat;okul;"
+        "entry": {
+          "Name": "Kulüp Takip",
+          "Comment": "Kulüp yoklama ve aidat takibi",
+          "Keywords": "kulüp;yoklama;aidat;okul;"
+        }
       }
     },
     "appImage": {
