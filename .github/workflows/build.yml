@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
       - name: Birim testleri
         run: npm test
       - name: Paketle (.deb ve AppImage)
@@ -68,7 +68,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
       - name: Birim testleri
         run: npm test
       - name: Paketle (kurulum .exe)
@@ -85,6 +85,14 @@ jobs:
           $setup = Get-ChildItem release\KulupTakip-Kurulum-*.exe | Select-Object -First 1
           $i = Start-Process $setup.FullName -ArgumentList '/S' -PassThru
           if (-not $i.WaitForExit(180000)) { "kurulum zaman asimi" | Add-Content "$smoke\kurulum.txt" }
+          # NSIS kurulumu kendini geçici klasörden yeniden başlatır; program dosyası oluşana kadar bekle
+          for ($k = 0; $k -lt 90; $k++) {
+            $hazir = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter 'kulup-takip.exe' -ErrorAction SilentlyContinue
+            $calisan = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'KulupTakip-Kurulum*' -or $_.Name -like 'Un_*' }
+            if ($hazir -and -not $calisan) { break }
+            Start-Sleep 2
+          }
+          Start-Sleep 3
           $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter '*.exe' | Where-Object { $_.Name -like 'k*takip.exe' -and $_.Name -notlike 'Uninstall*' } | Select-Object -First 1
           "Kurulan program: $($exe.FullName)" | Add-Content "$smoke\kurulum.txt"
           Get-ChildItem "$env:USERPROFILE\Desktop" -Filter '*.lnk' | ForEach-Object { "Masaustu kisayolu: $($_.Name)" | Add-Content "$smoke\kurulum.txt" }
