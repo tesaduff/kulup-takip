@@ -31,7 +31,8 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq xvfb ./release/kulup-takip_*_amd64.deb
-          BIN=$(dpkg -L kulup-takip | grep -E '/kulup-takip$' | head -1)
+          BIN=$(dpkg -L kulup-takip | while read -r f; do if [ -f "$f" ] && [ -x "$f" ] && [ "$(basename "$f")" = kulup-takip ]; then echo "$f"; fi; done | head -1)
+          ls -la /usr/bin/kulup-takip || true
           echo "Kurulan program: $BIN"
           ls -la /usr/share/applications | grep -i kulup || true
           xvfb-run -a -s "-screen 0 1440x900x24" "$BIN" --no-sandbox --smoke="$PWD/smoke-linux"
@@ -74,7 +75,8 @@ jobs:
           $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter '*.exe' | Where-Object { $_.Name -like 'K*Takip.exe' } | Select-Object -First 1
           Write-Host "Kurulan program: $($exe.FullName)"
           $smoke = Join-Path $PWD 'smoke-win'
-          $p = Start-Process $exe.FullName -ArgumentList "--smoke=$smoke" -PassThru -Wait
+          $p = Start-Process $exe.FullName -ArgumentList "--smoke=$smoke" -PassThru
+          if (-not $p.WaitForExit(240000)) { Write-Host "ZAMAN ASIMI"; Stop-Process -Id $p.Id -Force }
           Get-Content "$smoke\smoke.log"
           if (-not (Select-String -Path "$smoke\smoke.log" -Pattern 'TAMAM' -Quiet)) { exit 1 }
       - uses: actions/upload-artifact@v4
