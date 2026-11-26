@@ -28,21 +28,30 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --linux --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
       - name: .deb paketini kur ve programı açarak dene
+        id: smoke
+        continue-on-error: true
         run: |
+          mkdir -p smoke-linux
           sudo apt-get update -qq
           sudo apt-get install -y -qq xvfb ./release/kulup-takip_*_amd64.deb
           BIN=$(dpkg -L kulup-takip | while read -r f; do if [ -f "$f" ] && [ -x "$f" ] && [ "$(basename "$f")" = kulup-takip ]; then echo "$f"; fi; done | head -1)
-          ls -la /usr/bin/kulup-takip || true
-          echo "Kurulan program: $BIN"
-          ls -la /usr/share/applications | grep -i kulup || true
-          xvfb-run -a -s "-screen 0 1440x900x24" "$BIN" --no-sandbox --smoke="$PWD/smoke-linux"
-          cat smoke-linux/smoke.log
+          echo "Kurulan program: $BIN" | tee smoke-linux/kurulum.txt
+          ls -la /usr/bin/kulup-takip >> smoke-linux/kurulum.txt 2>&1 || true
+          ls /usr/share/applications | grep -i kulup >> smoke-linux/kurulum.txt 2>&1 || true
+          timeout 300 xvfb-run -a -s "-screen 0 1440x900x24" "$BIN" --no-sandbox --smoke="$PWD/smoke-linux" > smoke-linux/stdout.txt 2>&1 || echo "cikis kodu $?" >> smoke-linux/kurulum.txt
           grep -q TAMAM smoke-linux/smoke.log
-      - uses: actions/upload-artifact@v4
+      - name: Test sonucunu raporla
         if: always()
-        with:
-          name: pardus-test-ekranlari
-          path: smoke-linux/
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for f in kurulum.txt smoke.log console.txt; do [ -f smoke-linux/$f ] && while IFS= read -r l; do echo "::notice title=linux $f::$l"; done < smoke-linux/$f; done
+          [ -f smoke-linux/stdout.txt ] && tail -25 smoke-linux/stdout.txt | while IFS= read -r l; do echo "::notice title=linux stdout::$l"; done
+          rm -rf /tmp/pub && mkdir /tmp/pub && cp -r smoke-linux/. /tmp/pub/ && find /tmp/pub -name '*.xlsx' -delete
+          cd /tmp/pub && git init -q && git checkout -q -b ci-linux && git add . && git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "Linux test ekranlari ${{ github.sha }}" && git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}" ci-linux
+      - name: Test başarısızsa durdur
+        if: steps.smoke.outcome != 'success'
+        run: exit 1
       - uses: actions/upload-artifact@v4
         with:
           name: pardus-paketleri
@@ -68,22 +77,34 @@ jobs:
         shell: bash
         run: npx electron-builder --win --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
       - name: Kurulumu çalıştır ve programı açarak dene
+        id: smoke
+        continue-on-error: true
         shell: pwsh
         run: |
+          $smoke = Join-Path $PWD 'smoke-win'; New-Item -ItemType Directory -Force $smoke | Out-Null
           $setup = Get-ChildItem release\KulupTakip-Kurulum-*.exe | Select-Object -First 1
-          Start-Process $setup.FullName -ArgumentList '/S' -Wait
-          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter '*.exe' | Where-Object { $_.Name -like 'K*Takip.exe' } | Select-Object -First 1
-          Write-Host "Kurulan program: $($exe.FullName)"
-          $smoke = Join-Path $PWD 'smoke-win'
+          $i = Start-Process $setup.FullName -ArgumentList '/S' -PassThru
+          if (-not $i.WaitForExit(180000)) { "kurulum zaman asimi" | Add-Content "$smoke\kurulum.txt" }
+          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter '*.exe' | Where-Object { $_.Name -like 'k*takip.exe' -and $_.Name -notlike 'Uninstall*' } | Select-Object -First 1
+          "Kurulan program: $($exe.FullName)" | Add-Content "$smoke\kurulum.txt"
+          Get-ChildItem "$env:USERPROFILE\Desktop" -Filter '*.lnk' | ForEach-Object { "Masaustu kisayolu: $($_.Name)" | Add-Content "$smoke\kurulum.txt" }
           $p = Start-Process $exe.FullName -ArgumentList "--smoke=$smoke" -PassThru
-          if (-not $p.WaitForExit(240000)) { Write-Host "ZAMAN ASIMI"; Stop-Process -Id $p.Id -Force }
-          Get-Content "$smoke\smoke.log"
+          if (-not $p.WaitForExit(300000)) { "program zaman asimi" | Add-Content "$smoke\kurulum.txt"; Stop-Process -Id $p.Id -Force }
+          else { "cikis kodu $($p.ExitCode)" | Add-Content "$smoke\kurulum.txt" }
           if (-not (Select-String -Path "$smoke\smoke.log" -Pattern 'TAMAM' -Quiet)) { exit 1 }
-      - uses: actions/upload-artifact@v4
+      - name: Test sonucunu raporla
         if: always()
-        with:
-          name: windows-test-ekranlari
-          path: smoke-win/
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for f in kurulum.txt smoke.log console.txt; do [ -f smoke-win/$f ] && while IFS= read -r l; do echo "::notice title=windows $f::$l"; done < smoke-win/$f; done
+          rm -rf ../pub && mkdir ../pub && cp -r smoke-win/. ../pub/ && find ../pub -name '*.xlsx' -delete
+          cd ../pub && git init -q && git checkout -q -b ci-windows && git add . && git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "Windows test ekranlari ${{ github.sha }}" && git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}" ci-windows
+      - name: Test başarısızsa durdur
+        if: steps.smoke.outcome != 'success'
+        shell: bash
+        run: exit 1
       - uses: actions/upload-artifact@v4
         with:
           name: windows-kurulum

@@ -34,6 +34,14 @@ function pencere() {
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return { action: 'deny' }; });
   win.webContents.on('will-navigate', e => e.preventDefault());
   if (!SMOKE) win.once('ready-to-show', () => win.maximize());
+  if (SMOKE) {
+    const kayit = m => { try { fs.appendFileSync(path.join(klasor(), 'console.txt'), m + '\n'); } catch (e) { /* yoksay */ } };
+    kayit('basladi ' + app.getVersion() + ' ' + process.platform);
+    win.webContents.on('console-message', (_e, level, message, line, source) => kayit(`[${level}] ${message} (${source}:${line})`));
+    win.webContents.on('did-fail-load', (_e, code, desc) => kayit('yukleme hatasi ' + code + ' ' + desc));
+    win.webContents.on('render-process-gone', (_e, d) => { kayit('renderer coktu ' + JSON.stringify(d)); app.exit(3); });
+    process.on('uncaughtException', e => { kayit('main hata ' + (e && e.stack)); });
+  }
   win.on('close', e => {
     if (win.__kapatIzin) return;
     e.preventDefault();
