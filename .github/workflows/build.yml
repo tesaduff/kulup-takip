@@ -87,7 +87,9 @@ jobs:
         run: |
           $smoke = Join-Path $PWD 'smoke-win'; New-Item -ItemType Directory -Force $smoke | Out-Null
           $setup = Get-ChildItem release\KulupTakip-Kurulum-*.exe | Select-Object -First 1
-          Start-Process $setup.FullName -ArgumentList '/S' -Wait
+          "Kurulum dosyasi: $($setup.FullName)" | Add-Content "$smoke\kurulum.txt"
+          $i = Start-Process $setup.FullName -ArgumentList '/S' -Wait -PassThru
+          "Kurulum cikis kodu: $($i.ExitCode)" | Add-Content "$smoke\kurulum.txt"
           # NSIS kurulumu kendini geçici klasörden yeniden başlatır; program dosyası oluşana kadar bekle
           for ($k = 0; $k -lt 90; $k++) {
             $hazir = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter 'kulup-takip.exe' -ErrorAction SilentlyContinue
@@ -96,6 +98,8 @@ jobs:
             Start-Sleep 2
           }
           Start-Sleep 3
+          "Bekleme turu: $k" | Add-Content "$smoke\kurulum.txt"
+          Get-ChildItem "$env:LOCALAPPDATA\Programs" -Depth 1 -ErrorAction SilentlyContinue | ForEach-Object { "dizin: $($_.FullName)" } | Add-Content "$smoke\kurulum.txt"
           $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter '*.exe' | Where-Object { $_.Name -like 'k*takip.exe' -and $_.Name -notlike 'Uninstall*' } | Select-Object -First 1
           "Kurulan program: $($exe.FullName)" | Add-Content "$smoke\kurulum.txt"
           Get-ChildItem "$env:USERPROFILE\Desktop" -Filter '*.lnk' | ForEach-Object { "Masaustu kisayolu: $($_.Name)" | Add-Content "$smoke\kurulum.txt" }
