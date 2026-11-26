@@ -50,7 +50,7 @@ main { display: flex; flex-direction: column; min-width: 0; overflow: hidden }
 .stat .ic { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: var(--icb); color: var(--icc); flex: none }
 .stat .ic svg { width: 26px; height: 26px }
 .stat .l { color: var(--muted); font-size: 13px; font-weight: 700 }
-.stat .v { font-size: 25px; font-weight: 900; margin-top: 2px } .stat .s { color: var(--muted); font-size: 12.5px; margin-top: 2px }
+.stat .v { font-size: clamp(17px, 1.55vw, 25px); font-weight: 900; margin-top: 2px; white-space: nowrap } .stat .s { color: var(--muted); font-size: 12.5px; margin-top: 2px }
 .btn { display: inline-flex; align-items: center; gap: 8px; border: 1.5px solid var(--line); background: #fff; border-radius: 12px; padding: 9px 16px; cursor: pointer; font-weight: 700; white-space: nowrap; transition: .12s }
 .btn:hover { border-color: #d6cfbf; transform: translateY(-1px) } .btn svg { width: 18px; height: 18px }
 .btn.pri { background: var(--pri); border-color: var(--pri); color: #fff; box-shadow: 0 4px 12px rgba(58,123,213,.28) } .btn.pri:hover { background: var(--pri-d) }
@@ -84,7 +84,7 @@ table.tbl { width: 100%; border-collapse: collapse }
 .tbl td { padding: 10px 14px; border-bottom: 1px solid #f1ede5; vertical-align: middle }
 .tbl tbody tr:hover td { background: #fcfaf6 } .tbl .r { text-align: right } .tbl .c { text-align: center }
 .tbl tr.left td { opacity: .55 } .tbl tfoot td { font-weight: 800; background: #fbf9f5; border-top: 2px solid var(--line) }
-.tbl .name { font-weight: 700 } .tbl .sub { color: var(--muted); font-size: 12.5px }
+.tbl .name { font-weight: 700; white-space: nowrap } .tbl .sub { color: var(--muted); font-size: 12.5px }
 .money-in { width: 115px; text-align: right; font-weight: 700 }
 .empty { text-align: center; padding: 56px 20px; color: var(--muted) } .empty b { display: block; color: var(--ink); font-size: 18px; margin-bottom: 8px }
 .empty .big-ic { width: 70px; height: 70px; margin: 0 auto 14px; border-radius: 22px; background: var(--pri-2); color: var(--pri); display: grid; place-items: center } .empty .big-ic svg { width: 34px; height: 34px }
@@ -118,7 +118,7 @@ table.tbl { width: 100%; border-collapse: collapse }
 .bar { height: 10px; background: #f0ece3; border-radius: 6px; overflow: hidden } .bar i { display: block; height: 100%; background: linear-gradient(90deg, #45b874, #2f9e5d); border-radius: 6px }
 .hello { background: linear-gradient(120deg, #3a7bd5, #5aa0e8); color: #fff; border-radius: var(--r); padding: 22px 26px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; gap: 20px; box-shadow: 0 10px 26px rgba(58,123,213,.25) }
 .hello h2 { font-size: 23px; font-weight: 900 } .hello p { margin: 6px 0 0; color: #e3eeff }
-.hello .acts { display: flex; gap: 8px; flex-wrap: wrap } .hello .btn { border: 0 }
+.hello .acts { display: flex; gap: 8px; flex-wrap: wrap } .hello .btn { border: 0; color: var(--ink); background: #fff }
 
 /* ---------- raporlar ---------- */
 .rep { display: grid; grid-template-columns: 310px 1fr; gap: 18px; height: calc(100vh - 118px) }

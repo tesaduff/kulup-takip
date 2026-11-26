@@ -556,7 +556,7 @@ async function gecmis(s, ay) {
 
 // ================= RAPORLAR =================
 const REP_IC = { gunluk: ['cal', 'green'], haftalik: ['cal', 'teal'], aylikYoklama: ['check', 'green'], aylikAidat: ['wallet', 'orange'], paket: ['file', 'blue'], toplu: ['table', 'purple'], borclular: ['alert', 'red'], mektup: ['mail', 'red'], tahsilat: ['coin', 'orange'], makbuz: ['receipt', 'teal'], ekstre: ['users', 'purple'], liste: ['users', 'blue'] };
-let RP = null, ZOOM = 0.9;
+let RP = null, ZOOM = 'fit';
 function raporlar() {
   const t = today();
   RP = Object.assign({ id: 'aylikAidat', gun: bugunKey(), ay: varsAy(), bas: L.ayKey(t) + '-01', bit: bugunKey(), ogrenci: (L.sirala(D.students)[0] || {}).id || '' }, RP || {}, PARAMS);
@@ -581,10 +581,10 @@ function raporCiz() {
   if (tur.param === 'ogrenci' || tur.param === 'ogrenciAy') p = `<select class="inp" data-k="ogrenci" style="max-width:230px">${ogrOpts()}</select>`;
   if (tur.param === 'ogrenciAy') p += `<select class="inp" data-k="ay">${ayOpts(RP.ay)}</select>`;
   $('#rbar').innerHTML = `${p}<span class="sp" style="flex:1"></span><span class="hint" id="sayfa"></span>
-    <select class="inp" id="zoom" title="Yakınlaştırma">${[0.6, 0.75, 0.9, 1, 1.25].map(z => `<option value="${z}" ${z === ZOOM ? 'selected' : ''}>%${Math.round(z * 100)}</option>`).join('')}</select>
+    <select class="inp" id="zoom" title="Yakınlaştırma"><option value="fit" ${ZOOM === 'fit' ? 'selected' : ''}>Sayfaya sığdır</option>${[0.6, 0.75, 1, 1.25].map(z => `<option value="${z}" ${z === ZOOM ? 'selected' : ''}>%${Math.round(z * 100)}</option>`).join('')}</select>
     <button class="btn" id="xls">${ic('table')}Excel</button><button class="btn" id="pdf">${ic('pdf')}PDF</button><button class="btn pri" id="yaz">${ic('printer')}Yazdır</button>`;
   $$('#rbar [data-k]').forEach(e => e.onchange = () => { RP[e.dataset.k] = e.value; raporCiz(); });
-  $('#zoom').onchange = e => { ZOOM = +e.target.value; zoomUygula(); };
+  $('#zoom').onchange = e => { ZOOM = e.target.value === 'fit' ? 'fit' : +e.target.value; zoomUygula(); };
   const ad = () => `${tur.ad.replace(/[^\p{L}\p{N} ]/gu, '').replace(/\s+/g, '_')}_${D.settings.sinif}_${tur.param === 'ay' || tur.param === 'ogrenciAy' ? RP.ay : tur.param === 'gun' ? RP.gun : tur.param === 'aralik' ? RP.bas + '_' + RP.bit : L.gunKey(today())}`;
   try {
     if ((tur.param === 'ogrenci' || tur.param === 'ogrenciAy') && !RP.ogrenci) throw new Error('Önce öğrenci ekleyin.');
@@ -599,7 +599,15 @@ function raporCiz() {
   $('#pdf').onclick = () => is(() => api.pdf({ html: SON_HTML, ad: ad(), sor: true }), 'PDF kaydedildi');
   $('#xls').onclick = () => is(() => api.exportExcel({ models: SON_MODELS, settings: D.settings, ad: ad(), sor: true }), 'Excel dosyası kaydedildi');
 }
-function zoomUygula() { try { const b = $('#rf').contentDocument.body; b.style.setProperty('--zoom', ZOOM); } catch (e) { /* yoksay */ } }
+function zoomUygula() {
+  try {
+    const f = $('#rf'), b = f.contentDocument.body;
+    let z = ZOOM;
+    if (z === 'fit') { b.style.setProperty('--zoom', 1); const p = b.querySelector('.page'); z = p ? Math.max(0.3, Math.min(1.3, (f.clientWidth - 40) / p.offsetWidth)) : 1; }
+    b.style.setProperty('--zoom', z);
+  } catch (e) { /* yoksay */ }
+}
+window.addEventListener('resize', () => { if (PAGE === 'raporlar' && ZOOM === 'fit') zoomUygula(); });
 
 // ================= AYARLAR =================
 function ayarlar() {
@@ -731,7 +739,7 @@ async function smoke() {
       RP.id = tr.id; RP.ogrenci = 2; raporCiz();
       if (!SON_HTML) throw new Error('rapor oluşmadı: ' + tr.id);
       log.push(`rapor ${tr.id}: ${$('#sayfa').textContent}`);
-      if (['aylikAidat', 'toplu', 'mektup', 'haftalik'].includes(tr.id)) await shot('05_rapor_' + tr.id);
+      if (['aylikAidat', 'toplu', 'mektup', 'haftalik'].includes(tr.id)) { await bekle(900); await shot('05_rapor_' + tr.id); }
       await api.exportExcel({ models: SON_MODELS, settings: D.settings, ad: 'test_' + tr.id, sor: false });
       if (['aylikAidat', 'aylikYoklama', 'toplu', 'mektup'].includes(tr.id)) await api.pdf({ html: SON_HTML, ad: 'test_' + tr.id, sor: false });
     }

@@ -10,6 +10,7 @@ const REPO = 'tesaduff/kulup-takip';
 const smokeArg = process.argv.find(a => a.startsWith('--smoke'));
 const SMOKE = smokeArg ? (smokeArg.split('=')[1] || path.join(os.tmpdir(), 'kulup-smoke')) : null;
 
+app.commandLine.appendSwitch('lang', 'tr');
 if (!SMOKE && !app.requestSingleInstanceLock()) { app.quit(); }
 
 function klasor() {
