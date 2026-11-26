@@ -87,8 +87,7 @@ jobs:
         run: |
           $smoke = Join-Path $PWD 'smoke-win'; New-Item -ItemType Directory -Force $smoke | Out-Null
           $setup = Get-ChildItem release\KulupTakip-Kurulum-*.exe | Select-Object -First 1
-          $i = Start-Process $setup.FullName -ArgumentList '/S' -PassThru
-          if (-not $i.WaitForExit(180000)) { "kurulum zaman asimi" | Add-Content "$smoke\kurulum.txt" }
+          Start-Process $setup.FullName -ArgumentList '/S' -Wait
           # NSIS kurulumu kendini geçici klasörden yeniden başlatır; program dosyası oluşana kadar bekle
           for ($k = 0; $k -lt 90; $k++) {
             $hazir = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter 'kulup-takip.exe' -ErrorAction SilentlyContinue
