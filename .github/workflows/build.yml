@@ -1,4 +1,4 @@
-name: Derle ve Yayınla
+name: Derle, Test Et ve Yayınla
 
 on:
   push:
@@ -11,24 +11,78 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  pardus-linux:
+    name: Pardus / Linux (.deb + AppImage)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Birim testleri
+        run: npm test
+      - name: Paketle (.deb ve AppImage)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --linux --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
+      - name: .deb paketini kur ve programı açarak dene
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb ./release/kulup-takip_*_amd64.deb
+          BIN=$(dpkg -L kulup-takip | grep -E '/kulup-takip$' | head -1)
+          echo "Kurulan program: $BIN"
+          ls -la /usr/share/applications | grep -i kulup || true
+          xvfb-run -a -s "-screen 0 1440x900x24" "$BIN" --no-sandbox --smoke="$PWD/smoke-linux"
+          cat smoke-linux/smoke.log
+          grep -q TAMAM smoke-linux/smoke.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pardus-test-ekranlari
+          path: smoke-linux/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pardus-paketleri
+          path: |
+            release/*.deb
+            release/*.AppImage
+
+  windows:
+    name: Windows (kurulum .exe)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Derle ve test et
-        shell: powershell
-        run: powershell -ExecutionPolicy Bypass -File build.ps1 -Test
-
-      - name: EXE'yi sakla
-        uses: actions/upload-artifact@v4
+      - uses: actions/setup-node@v4
         with:
-          name: KulupTakip
-          path: dist/KulupTakip.exe
-
-      - name: Release oluştur
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Birim testleri
+        run: npm test
+      - name: Paketle (kurulum .exe)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: npx electron-builder --win --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
+      - name: Kurulumu çalıştır ve programı açarak dene
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem release\KulupTakip-Kurulum-*.exe | Select-Object -First 1
+          Start-Process $setup.FullName -ArgumentList '/S' -Wait
+          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter '*.exe' | Where-Object { $_.Name -like 'K*Takip.exe' } | Select-Object -First 1
+          Write-Host "Kurulan program: $($exe.FullName)"
+          $smoke = Join-Path $PWD 'smoke-win'
+          $p = Start-Process $exe.FullName -ArgumentList "--smoke=$smoke" -PassThru -Wait
+          Get-Content "$smoke\smoke.log"
+          if (-not (Select-String -Path "$smoke\smoke.log" -Pattern 'TAMAM' -Quiet)) { exit 1 }
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          files: dist/KulupTakip.exe
-          generate_release_notes: true
+          name: windows-test-ekranlari
+          path: smoke-win/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-kurulum
+          path: release/KulupTakip-Kurulum-*.exe

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-src 'self' blob: data:">
+  <title>Kulüp Takip</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="auth" hidden></div>
+  <div id="app" hidden>
+    <aside id="side">
+      <div class="brand"><div class="logo">K</div><div><b>Kulüp Takip</b><small id="brandSinif"></small></div></div>
+      <nav id="nav"></nav>
+      <div class="side-foot">
+        <div id="saveState" class="save ok">Kaydedildi</div>
+        <div id="userBox"></div>
+      </div>
+    </aside>
+    <main>
+      <header id="top"><div><h1 id="pageTitle"></h1><div id="pageSub"></div></div><div id="topRight"></div></header>
+      <section id="page"></section>
+    </main>
+  </div>
+  <div id="modalRoot"></div>
+  <div id="toasts"></div>
+  <script src="logic.js"></script>
+  <script src="reports.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

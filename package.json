@@ -1,0 +1,100 @@
+{
+  "name": "kulup-takip",
+  "productName": "Kulüp Takip",
+  "version": "2.0.0",
+  "description": "İlkokul sınıf öğretmenleri için kulüp yoklama ve aidat takip programı",
+  "author": {
+    "name": "Kulüp Takip",
+    "email": "tesaduff@users.noreply.github.com"
+  },
+  "homepage": "https://github.com/tesaduff/kulup-takip",
+  "license": "MIT",
+  "main": "app/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/test.js",
+    "smoke": "electron . --smoke",
+    "dist:win": "electron-builder --win --publish never",
+    "dist:linux": "electron-builder --linux --publish never"
+  },
+  "dependencies": {
+    "electron-updater": "6.3.9",
+    "exceljs": "4.4.0"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "tr.kuluptakip.app",
+    "productName": "Kulüp Takip",
+    "executableName": "kulup-takip",
+    "artifactName": "KulupTakip-${version}-${os}-${arch}.${ext}",
+    "files": [
+      "app/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "tesaduff",
+        "repo": "kulup-takip",
+        "releaseType": "release"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Kulüp Takip",
+      "artifactName": "KulupTakip-Kurulum-${version}.${ext}"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "Education",
+      "maintainer": "Kulüp Takip <tesaduff@users.noreply.github.com>",
+      "synopsis": "Kulüp yoklama ve aidat takip programı",
+      "desktop": {
+        "Name": "Kulüp Takip",
+        "Comment": "Kulüp yoklama ve aidat takibi",
+        "Keywords": "kulüp;yoklama;aidat;okul;"
+      }
+    },
+    "appImage": {
+      "artifactName": "KulupTakip-${version}.AppImage"
+    },
+    "deb": {
+      "artifactName": "kulup-takip_${version}_amd64.deb"
+    }
+  }
+}
