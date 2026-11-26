@@ -26,7 +26,9 @@ jobs:
       - name: Paketle (.deb ve AppImage)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --linux --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
+        run: |
+          set -o pipefail
+          npx electron-builder --linux --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }} 2>&1 | tee build.log || { mkdir -p smoke-linux; cp build.log smoke-linux/; grep -iE "⨯|error|fail|cannot" build.log | tail -10 | while IFS= read -r l; do echo "::error title=linux paketleme::$l"; done; exit 1; }
       - name: .deb paketini kur ve programı açarak dene
         id: smoke
         continue-on-error: true
@@ -47,7 +49,7 @@ jobs:
         run: |
           for f in kurulum.txt smoke.log console.txt; do [ -f smoke-linux/$f ] && while IFS= read -r l; do echo "::notice title=linux $f::$l"; done < smoke-linux/$f; done
           [ -f smoke-linux/stdout.txt ] && tail -25 smoke-linux/stdout.txt | while IFS= read -r l; do echo "::notice title=linux stdout::$l"; done
-          rm -rf /tmp/pub && mkdir /tmp/pub && cp -r smoke-linux/. /tmp/pub/ && find /tmp/pub -name '*.xlsx' -delete
+          mkdir -p smoke-linux && rm -rf /tmp/pub && mkdir /tmp/pub && cp -r smoke-linux/. /tmp/pub/ && touch /tmp/pub/.keep && find /tmp/pub -name '*.xlsx' -delete
           cd /tmp/pub && git init -q && git checkout -q -b ci-linux && git add . && git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "Linux test ekranlari ${{ github.sha }}" && git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}" ci-linux
       - name: Test başarısızsa durdur
         if: steps.smoke.outcome != 'success'
@@ -75,7 +77,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
-        run: npx electron-builder --win --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }}
+        run: |
+          set -o pipefail
+          npx electron-builder --win --publish ${{ startsWith(github.ref, 'refs/tags/v') && 'always' || 'never' }} 2>&1 | tee build.log || { mkdir -p smoke-win; cp build.log smoke-win/; grep -iE "⨯|error|fail|cannot" build.log | tail -10 | while IFS= read -r l; do echo "::error title=windows paketleme::$l"; done; exit 1; }
       - name: Kurulumu çalıştır ve programı açarak dene
         id: smoke
         continue-on-error: true
@@ -107,7 +111,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           for f in kurulum.txt smoke.log console.txt; do [ -f smoke-win/$f ] && while IFS= read -r l; do echo "::notice title=windows $f::$l"; done < smoke-win/$f; done
-          rm -rf ../pub && mkdir ../pub && cp -r smoke-win/. ../pub/ && find ../pub -name '*.xlsx' -delete
+          mkdir -p smoke-win && rm -rf ../pub && mkdir ../pub && cp -r smoke-win/. ../pub/ && touch ../pub/.keep && find ../pub -name '*.xlsx' -delete
           cd ../pub && git init -q && git checkout -q -b ci-windows && git add . && git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "Windows test ekranlari ${{ github.sha }}" && git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}" ci-windows
       - name: Test başarısızsa durdur
         if: steps.smoke.outcome != 'success'
