@@ -1,0 +1,26 @@
+Kurulum dosyasi: D:\a\kulup-takip\kulup-takip\release\KulupTakip-Kurulum-2.1.1.exe
+Kurulum cikis kodu: 0
+Bekleme turu: 0
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\locales
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\resources
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\chrome_100_percent.pak
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\chrome_200_percent.pak
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\d3dcompiler_47.dll
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\ffmpeg.dll
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\icudtl.dat
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\kulup-takip.exe
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\libEGL.dll
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\libGLESv2.dll
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\LICENSE.electron.txt
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\LICENSES.chromium.html
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\resources.pak
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\snapshot_blob.bin
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\Uninstall kulup-takip.exe
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\v8_context_snapshot.bin
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\vk_swiftshader_icd.json
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\vk_swiftshader.dll
+dizin: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\vulkan-1.dll
+Kurulan program: C:\Users\runneradmin\AppData\Local\Programs\kulup-takip\kulup-takip.exe
+Masaustu kisayolu: Kulüp Takip.lnk
+cikis kodu 0

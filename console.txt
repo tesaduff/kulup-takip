@@ -1,0 +1,2 @@
+basladi 2.1.1 win32
+[1] Autofocus processing was blocked because a document already has a focused element. (file:///C:/Users/runneradmin/AppData/Local/Programs/kulup-takip/resources/app.asar/app/renderer/index.html?smoke=1:0)
