@@ -1,0 +1,32 @@
+ekran: 01_kurulum
+ekran: 02_giris
+ekran: 02b_sifre_yenile
+ekran: 03_panel
+ekran: 04_ogrenciler
+ekran: 04_yoklama
+ekran: 04_aidat
+ekran: 04_ayarlar
+rapor gunluk: 2 sayfa
+rapor haftalik: 2 sayfa
+  zoom=0.5307212822796082 sayfa=2
+ekran: 05_rapor_haftalik
+rapor aylikYoklama: 1 sayfa
+rapor aylikAidat: 2 sayfa
+  zoom=0.5307212822796082 sayfa=2
+ekran: 05_rapor_aylikAidat
+rapor paket: 3 sayfa
+rapor toplu: 2 sayfa
+  zoom=0.7506297229219143 sayfa=2
+ekran: 05_rapor_toplu
+rapor borclular: 1 sayfa
+rapor mektup: 3 sayfa
+  zoom=0.7506297229219143 sayfa=3
+ekran: 05_rapor_mektup
+rapor tahsilat: 1 sayfa
+rapor makbuz: 2 sayfa
+rapor ekstre: 1 sayfa
+rapor liste: 1 sayfa
+ekran: 06_baski_onizleme
+baski onizleme: OK
+kaydet/oku: OK 12 öğrenci, 26 ödeme
+TAMAM

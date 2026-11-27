@@ -1,0 +1,3 @@
+Kurulan program: /opt/Kulüp Takip/kulup-takip
+lrwxrwxrwx 1 root root 29 Nov 27 06:32 /usr/bin/kulup-takip -> /etc/alternatives/kulup-takip
+kulup-takip.desktop

@@ -1,0 +1,2 @@
+basladi 2.1.1 linux
+[1] Autofocus processing was blocked because a document already has a focused element. (file:///opt/Kul%C3%BCp%20Takip/resources/app.asar/app/renderer/index.html?smoke=1:0)
