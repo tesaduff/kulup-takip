@@ -168,3 +168,13 @@ table.tbl { width: 100%; border-collapse: collapse }
 /* form kutuları kapsayıcısından taşmasın */
 .form > * { min-width: 0 }
 label.f .inp { width: 100% }
+
+/* giriş/kurulum: daha geniş kutu, dar ekranda tek sütun */
+.auth-box form { width: min(560px, 100%) }
+.auth-box { overflow: auto }
+@media (max-width: 1100px) {
+  #auth { grid-template-columns: 1fr }
+  .auth-art { display: none }
+  .auth-box { padding: 24px }
+}
+@media (max-height: 760px) { .auth-box { align-items: flex-start } }
