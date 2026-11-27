@@ -90,7 +90,7 @@ async function load(file) {
     if (t && oid && r.Durum) data.attendance[`${t}|${oid}`] = r.Durum;
   }
   const ku = wb.getWorksheet('Kullanici');
-  if (ku) for (const r of tablo(ku)) if (r.KullaniciAdi) data.users.push({ ad: r.KullaniciAdi, salt: r.Salt, hash: r.Hash, kurtarmaSalt: r.KurtarmaSalt, kurtarmaHash: r.KurtarmaHash });
+  if (ku) for (const r of tablo(ku)) if (r.KullaniciAdi) data.users.push({ ad: r.KullaniciAdi, salt: r.Salt, hash: r.Hash, soru: r.Soru || '', cevapSalt: r.CevapSalt || '', cevapHash: r.CevapHash || '' });
   return data;
 }
 
@@ -139,8 +139,8 @@ async function save(file, data) {
   [12, 10, 28, 12].forEach((w, i) => y.getColumn(i + 1).width = w);
 
   const k = wb.addWorksheet('Kullanici', { state: 'hidden' });
-  headRow(k, ['KullaniciAdi', 'Salt', 'Hash', 'KurtarmaSalt', 'KurtarmaHash']);
-  for (const x of data.users || []) k.addRow([x.ad, x.salt, x.hash, x.kurtarmaSalt || '', x.kurtarmaHash || '']);
+  headRow(k, ['KullaniciAdi', 'Salt', 'Hash', 'Soru', 'CevapSalt', 'CevapHash']);
+  for (const x of data.users || []) k.addRow([x.ad, x.salt, x.hash, x.soru || '', x.cevapSalt || '', x.cevapHash || '']);
 
   const tmp = file + '.tmp';
   await wb.xlsx.writeFile(tmp);

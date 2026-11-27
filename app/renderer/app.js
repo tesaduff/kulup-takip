@@ -92,13 +92,18 @@ async function ozet(sifre, salt) {
   const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(sifre), 'PBKDF2', false, ['deriveBits']);
   return hex(new Uint8Array(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: unhex(salt), iterations: 150000 }, k, 256)));
 }
-function kurtarmaKodu() { const a = 'ABCDEFGHJKLMNPRSTUVYZ23456789'; const r = crypto.getRandomValues(new Uint8Array(8)); const s = Array.from(r, x => a[x % a.length]).join(''); return s.slice(0, 4) + '-' + s.slice(4); }
-async function kullaniciKur(ad, sifre) {
-  const salt = rastgele(16), ks = rastgele(16), kod = kurtarmaKodu();
-  D.users = [{ ad, salt, hash: await ozet(sifre, salt), kurtarmaSalt: ks, kurtarmaHash: await ozet(kod.replace('-', ''), ks) }];
-  return kod;
+const SORULAR = ['Annenizin kızlık soyadı nedir?', 'İlk okulunuzun adı nedir?', 'Doğduğunuz şehir neresidir?', 'İlk evcil hayvanınızın adı nedir?', 'En sevdiğiniz öğretmeninizin adı nedir?', 'Çocukluk lakabınız nedir?'];
+const cevapNorm = s => L.norm(s).replace(/\s+/g, '');
+async function kullaniciKur(ad, sifre, soru, cevap) {
+  const salt = rastgele(16), cs = rastgele(16);
+  D.users = [{ ad, salt, hash: await ozet(sifre, salt), soru, cevapSalt: cs, cevapHash: await ozet(cevapNorm(cevap), cs) }];
 }
 const sifreKontrol = (a, b) => a.length < 4 ? 'Şifre en az 4 karakter olmalı.' : a !== b ? 'Şifreler aynı değil.' : '';
+// "Beni hatırla": bu bilgisayarda şifre sormadan aç (şifre değişince geçersiz olur)
+const HATIRLA = 'kt_beni_hatirla';
+const hatirlaIz = u => u.ad + '|' + u.hash.slice(0, 24);
+function hatirlaYaz(acik) { try { if (acik) localStorage.setItem(HATIRLA, hatirlaIz(D.users[0])); else localStorage.removeItem(HATIRLA); } catch (e) { /* yoksay */ } }
+function hatirlandi() { try { return !!D.users[0] && localStorage.getItem(HATIRLA) === hatirlaIz(D.users[0]); } catch (e) { return false; } }
 
 // ---------------- giriş / kurulum ----------------
 function authEkran(html) {
@@ -114,7 +119,7 @@ function kurulum(adim, guncelleme) {
   const st = D.settings;
   if (adim === 1) {
     const y0 = L.varsayilanYil();
-    const a = authEkran(`<form id="f"><div class="steps"><i class="on"></i><i></i><i></i></div>
+    const a = authEkran(`<form id="f"><div class="steps"><i class="on"></i><i></i></div>
       <h3>Hoş geldiniz! 👋</h3><div class="hint">Okul ve sınıf bilgilerinizi girin. Raporlarda bu bilgiler kullanılır.</div>
       <div class="form">
         <label class="f full">Okulun adı *<input class="inp" name="okul" value="${esc(st.okul)}" required></label>
@@ -136,57 +141,66 @@ function kurulum(adim, guncelleme) {
       kurulum(2);
     };
   } else if (adim === 2) {
-    const a = authEkran(`<form id="f"><div class="steps"><i class="on"></i><i class="on"></i><i></i></div>
-      <h3>Kullanıcı oluşturun 🔒</h3><div class="hint">${guncelleme ? 'Programın yeni sürümünde verileriniz şifre ile korunuyor. Bilgileriniz aynen duruyor; sadece bir kullanıcı adı ve şifre belirleyin.' : 'Program her açılışta bu kullanıcı adı ve şifreyi soracak.'}</div>
+    const a = authEkran(`<form id="f"><div class="steps"><i class="on"></i><i class="on"></i></div>
+      <h3>Kullanıcı oluşturun 🔒</h3><div class="hint">${guncelleme ? 'Programın yeni sürümünde verileriniz şifre ile korunuyor. Bilgileriniz aynen duruyor; sadece bir kullanıcı adı ve şifre belirleyin.' : 'Program açılışta bu kullanıcı adı ve şifreyi soracak.'}</div>
       <label class="f">Kullanıcı adı<input class="inp" name="ad" value="${esc((st.ogretmen.split(' ')[0] || '').toLocaleLowerCase('tr-TR'))}" required></label>
-      <label class="f">Şifre<input class="inp" type="password" name="s1" required></label>
-      <label class="f">Şifre (tekrar)<input class="inp" type="password" name="s2" required></label>
-      <div class="err-msg" id="err"></div><button class="btn pri" style="justify-content:center">Devam ${ic('right')}</button></form>`);
+      <div class="form"><label class="f">Şifre<input class="inp" type="password" name="s1" required></label>
+      <label class="f">Şifre (tekrar)<input class="inp" type="password" name="s2" required></label></div>
+      <label class="f">Güvenlik sorusu <span class="hint" style="font-weight:500">(şifrenizi unutursanız sorulur)</span><select class="inp" name="soru">${SORULAR.map(s => `<option>${esc(s)}</option>`).join('')}</select></label>
+      <label class="f">Cevabınız<input class="inp" name="cevap" required></label>
+      <label class="chk"><input type="checkbox" name="hatirla" checked><span>Beni hatırla<small>Bu bilgisayarda açılışta şifre sorma.</small></span></label>
+      <div class="err-msg" id="err"></div><button class="btn ok" style="justify-content:center">Programa Başla ${ic('right')}</button></form>`);
     $('#f', a).onsubmit = async e => {
       e.preventDefault(); const f = e.target;
       const h = sifreKontrol(f.s1.value, f.s2.value); if (h) { $('#err').textContent = h; return; }
       if (!f.ad.value.trim()) { $('#err').textContent = 'Kullanıcı adı yazın.'; return; }
-      const kod = await kullaniciKur(f.ad.value.trim(), f.s1.value);
+      if (cevapNorm(f.cevap.value).length < 2) { $('#err').textContent = 'Güvenlik sorusunun cevabını yazın.'; return; }
+      await kullaniciKur(f.ad.value.trim(), f.s1.value, f.soru.value, f.cevap.value);
       dirty = true; await kaydet();
-      kurulum(3, kod);
+      hatirlaYaz(f.hatirla.checked);
+      USER = D.users[0].ad; uygulama();
     };
-  } else {
-    const kod = guncelleme;
-    const a = authEkran(`<form id="f"><div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i></div>
-      <h3>Kurtarma kodunuz 🔑</h3><div class="hint">Şifrenizi unutursanız bu kod ile yeni şifre belirleyebilirsiniz. Lütfen bir yere not edin; bir daha gösterilmeyecek.</div>
-      <div class="code">${kod}</div>
-      <label class="chk"><input type="checkbox" name="ok"> Kodu not aldım</label>
-      <div class="err-msg" id="err"></div><button class="btn ok" style="justify-content:center">Programa Başla ${ic('right')}</button></form>`);
-    $('#f', a).onsubmit = e => { e.preventDefault(); if (!e.target.ok.checked) { $('#err').textContent = 'Lütfen kodu not aldığınızı onaylayın.'; return; } USER = D.users[0].ad; uygulama(); };
   }
 }
 function girisEkrani(mesaj) {
   const a = authEkran(`<form id="f"><h3>Tekrar hoş geldiniz</h3><div class="hint">${esc(D.settings.okul)} • ${esc(D.settings.sinif)} • ${esc(D.settings.ogretmen)}</div>
     <label class="f">Kullanıcı adı<input class="inp" name="ad" value="${esc(D.users[0].ad)}" required></label>
     <label class="f">Şifre<input class="inp" type="password" name="s" required autofocus></label>
+    <label class="chk"><input type="checkbox" name="hatirla"><span>Beni hatırla<small>Bu bilgisayarda bir dahaki açılışta şifre sorma.</small></span></label>
     <div class="err-msg" id="err">${esc(mesaj || '')}</div><button class="btn pri" style="justify-content:center">Giriş Yap ${ic('right')}</button>
     <button type="button" class="link" id="unut">Şifremi unuttum</button></form>`);
   setTimeout(() => $('[name=s]', a).focus(), 50);
   $('#f', a).onsubmit = async e => {
     e.preventDefault(); const f = e.target, u = D.users[0];
     if (L.norm(f.ad.value) !== L.norm(u.ad) || await ozet(f.s.value, u.salt) !== u.hash) { $('#err').textContent = 'Kullanıcı adı veya şifre hatalı.'; f.s.value = ''; f.s.focus(); return; }
+    hatirlaYaz(f.hatirla.checked);
     USER = u.ad; uygulama();
   };
-  $('#unut', a).onclick = () => {
-    const b = authEkran(`<form id="f"><h3>Şifre yenileme</h3><div class="hint">Kurulumda verilen kurtarma kodunu girin.</div>
-      <label class="f">Kurtarma kodu<input class="inp" name="kod" placeholder="ABCD-1234" required></label>
-      <label class="f">Yeni şifre<input class="inp" type="password" name="s1" required></label>
-      <label class="f">Yeni şifre (tekrar)<input class="inp" type="password" name="s2" required></label>
-      <div class="err-msg" id="err"></div><button class="btn pri" style="justify-content:center">Şifreyi Değiştir</button>
-      <button type="button" class="link" id="geri">Girişe dön</button></form>`);
-    $('#geri', b).onclick = () => girisEkrani();
-    $('#f', b).onsubmit = async e => {
-      e.preventDefault(); const f = e.target, u = D.users[0];
-      if (await ozet(f.kod.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''), u.kurtarmaSalt) !== u.kurtarmaHash) { $('#err').textContent = 'Kurtarma kodu hatalı.'; return; }
-      const h = sifreKontrol(f.s1.value, f.s2.value); if (h) { $('#err').textContent = h; return; }
-      u.salt = rastgele(16); u.hash = await ozet(f.s1.value, u.salt); dirty = true; await kaydet();
-      girisEkrani('Şifre değiştirildi. Yeni şifrenizle giriş yapın.');
-    };
+  $('#unut', a).onclick = () => sifreYenile();
+}
+// Şifremi unuttum: güvenlik sorusu ile (eski kurulumlarda öğretmen adı ve sınıf ile) doğrula
+function sifreYenile() {
+  const u = D.users[0], soruVar = !!(u.soru && u.cevapHash);
+  const b = authEkran(`<form id="f"><h3>Şifre yenileme</h3>
+    ${soruVar ? `<div class="hint">Kurulumda belirlediğiniz güvenlik sorusunu cevaplayın.</div>
+      <label class="f">${esc(u.soru)}<input class="inp" name="cevap" required></label>`
+    : `<div class="hint">Programda kayıtlı öğretmen adı soyadını ve sınıfı yazın.</div>
+      <label class="f">Sınıf öğretmeni (adı soyadı)<input class="inp" name="ogretmen" required></label>
+      <label class="f">Sınıf / şube<input class="inp" name="sinif" placeholder="2-B" required></label>`}
+    <div class="form"><label class="f">Yeni şifre<input class="inp" type="password" name="s1" required></label>
+    <label class="f">Yeni şifre (tekrar)<input class="inp" type="password" name="s2" required></label></div>
+    <div class="err-msg" id="err"></div><button class="btn pri" style="justify-content:center">Şifreyi Değiştir</button>
+    <button type="button" class="link" id="geri">Girişe dön</button></form>`);
+  $('#geri', b).onclick = () => girisEkrani();
+  $('#f', b).onsubmit = async e => {
+    e.preventDefault(); const f = e.target;
+    const dogru = soruVar ? await ozet(cevapNorm(f.cevap.value), u.cevapSalt) === u.cevapHash
+      : cevapNorm(f.ogretmen.value) === cevapNorm(D.settings.ogretmen) && cevapNorm(f.sinif.value) === cevapNorm(D.settings.sinif);
+    if (!dogru) { $('#err').textContent = soruVar ? 'Cevap hatalı.' : 'Bilgiler programda kayıtlı olanlarla uyuşmuyor.'; return; }
+    const h = sifreKontrol(f.s1.value, f.s2.value); if (h) { $('#err').textContent = h; return; }
+    u.salt = rastgele(16); u.hash = await ozet(f.s1.value, u.salt); dirty = true; await kaydet();
+    hatirlaYaz(false);
+    girisEkrani('Şifre değiştirildi. Yeni şifrenizle giriş yapın.');
   };
 }
 
@@ -204,7 +218,7 @@ function uygulama() {
   $('#nav').innerHTML = SAYFALAR.map(p => `<a data-p="${p.id}" style="--icb:${RENK[p.r][0]};--icc:${RENK[p.r][1]}"><span class="ic">${ic(p.ic)}</span>${p.ad}<span class="badge" hidden></span></a>`).join('');
   $$('#nav a').forEach(a => a.onclick = () => git(a.dataset.p));
   $('#userBox').innerHTML = `<span>👤 ${esc(USER)}</span><button id="cikis">Çıkış</button>`;
-  $('#cikis').onclick = async () => { await kaydet(); girisEkrani(); };
+  $('#cikis').onclick = async () => { await kaydet(); hatirlaYaz(false); girisEkrani(); };
   $('#brandSinif').textContent = `${D.settings.sinif} • ${D.settings.kulup}`;
   setSave('ok', '✓ Veriler Excel\'de');
   git('panel');
@@ -569,7 +583,7 @@ function raporlar() {
   $$('.rep-item').forEach(e => e.onclick = () => { RP.id = e.dataset.id; raporCiz(); });
   raporCiz();
 }
-let SON_HTML = null, SON_MODELS = null;
+let SON_HTML = null, SON_MODELS = null, RAPOR_IS = {};
 function raporCiz() {
   const tur = R.TURLER.find(x => x.id === RP.id);
   $$('.rep-item').forEach(e => e.classList.toggle('on', e.dataset.id === RP.id));
@@ -582,7 +596,7 @@ function raporCiz() {
   if (tur.param === 'ogrenciAy') p += `<select class="inp" data-k="ay">${ayOpts(RP.ay)}</select>`;
   $('#rbar').innerHTML = `${p}<span class="sp" style="flex:1"></span><span class="hint" id="sayfa"></span>
     <select class="inp" id="zoom" title="Yakınlaştırma"><option value="fit" ${ZOOM === 'fit' ? 'selected' : ''}>Sayfaya sığdır</option>${[0.6, 0.75, 1, 1.25].map(z => `<option value="${z}" ${z === ZOOM ? 'selected' : ''}>%${Math.round(z * 100)}</option>`).join('')}</select>
-    <button class="btn" id="xls">${ic('table')}Excel</button><button class="btn" id="pdf">${ic('pdf')}PDF</button><button class="btn pri" id="yaz">${ic('printer')}Yazdır</button>`;
+    <button class="btn" id="xls">${ic('table')}Excel</button><button class="btn" id="pdf">${ic('pdf')}PDF</button><button class="btn" id="yaz">${ic('printer')}Yazdır</button><button class="btn pri" id="onz">${ic('file')}Baskı Önizleme</button>`;
   $$('#rbar [data-k]').forEach(e => e.onchange = () => { RP[e.dataset.k] = e.value; raporCiz(); });
   $('#zoom').onchange = e => { ZOOM = e.target.value === 'fit' ? 'fit' : +e.target.value; zoomUygula(); };
   const ad = () => `${tur.ad.replace(/[^\p{L}\p{N} ]/gu, '').replace(/\s+/g, '_')}_${D.settings.sinif}_${tur.param === 'ay' || tur.param === 'ogrenciAy' ? RP.ay : tur.param === 'gun' ? RP.gun : tur.param === 'aralik' ? RP.bas + '_' + RP.bit : L.gunKey(today())}`;
@@ -595,9 +609,45 @@ function raporCiz() {
     const f = $('#rf'); f.srcdoc = h.html; f.onload = zoomUygula;
   } catch (e) { SON_HTML = null; $('#rf').srcdoc = `<div style="font-family:sans-serif;padding:40px;color:#c33">${esc(e.message)}</div>`; }
   const is = async (fn, msg) => { if (!SON_HTML) return; try { const r = await fn(); if (r) toast(msg + (typeof r === 'string' ? ': ' + r : ''), 'ok', 6000); } catch (e) { toast('İşlem başarısız: ' + e.message, 'err'); } };
+  RAPOR_IS = {
+    yaz: () => is(() => api.print({ html: SON_HTML }).then(r => r.ok ? 'Yazıcıya gönderildi' : (r.error && !/cancel/i.test(r.error) ? Promise.reject(new Error(r.error)) : null)), ''),
+    pdf: () => is(() => api.pdf({ html: SON_HTML, ad: ad(), sor: true }), 'PDF kaydedildi'),
+    xls: () => is(() => api.exportExcel({ models: SON_MODELS, settings: D.settings, ad: ad(), sor: true }), 'Excel dosyası kaydedildi'),
+    ad: tur.ad
+  };
+  $('#onz').onclick = baskiOnizleme;
   $('#yaz').onclick = () => is(() => api.print({ html: SON_HTML }).then(r => r.ok ? 'Yazıcıya gönderildi' : (r.error && r.error !== 'cancelled' && r.error !== 'Print job canceled' ? Promise.reject(new Error(r.error)) : null)), '');
   $('#pdf').onclick = () => is(() => api.pdf({ html: SON_HTML, ad: ad(), sor: true }), 'PDF kaydedildi');
   $('#xls').onclick = () => is(() => api.exportExcel({ models: SON_MODELS, settings: D.settings, ad: ad(), sor: true }), 'Excel dosyası kaydedildi');
+}
+// Tam ekran baskı önizleme: sayfaları büyük gösterir, oradan yazıcıya gönderilir
+function baskiOnizleme() {
+  if (!SON_HTML) return toast('Önce bir rapor seçin.', 'err');
+  const ov = document.createElement('div'); ov.className = 'pv';
+  ov.innerHTML = `<div class="pv-bar"><div class="pv-t"><b>${ic('printer')} Baskı Önizleme</b><span>${esc(RAPOR_IS.ad || '')} • ${esc($('#sayfa').textContent)} • A4</span></div><span class="sp"></span>
+    <select class="inp" id="pvz"><option value="fit">Sayfaya sığdır</option><option value="0.5">%50</option><option value="0.75">%75</option><option value="1">%100</option><option value="1.25">%125</option></select>
+    <button class="btn" id="pvx">${ic('table')}Excel</button><button class="btn" id="pvp">${ic('pdf')}PDF</button>
+    <button class="btn ok" id="pvy">${ic('printer')}Yazdır</button><button class="btn" id="pvk">${ic('x')}Kapat</button></div>
+    <iframe class="pv-frame" sandbox="allow-same-origin"></iframe>`;
+  document.body.appendChild(ov);
+  const fr = $('iframe', ov); let z = 'fit';
+  const uygula = () => {
+    try {
+      const b = fr.contentDocument.body; let zz = z;
+      if (zz === 'fit') { b.style.setProperty('--zoom', 1); const p = b.querySelector('.page'); zz = p ? Math.max(0.3, Math.min(1.5, (fr.clientWidth - 60) / p.offsetWidth)) : 1; }
+      b.style.setProperty('--zoom', zz);
+    } catch (e) { /* yoksay */ }
+  };
+  fr.onload = uygula; fr.srcdoc = SON_HTML;
+  const kapat = () => { ov.remove(); document.removeEventListener('keydown', tus); window.removeEventListener('resize', uygula); };
+  const tus = e => { if (e.key === 'Escape') kapat(); if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') { e.preventDefault(); RAPOR_IS.yaz(); } };
+  document.addEventListener('keydown', tus); window.addEventListener('resize', uygula);
+  $('#pvz', ov).onchange = e => { z = e.target.value === 'fit' ? 'fit' : +e.target.value; uygula(); };
+  $('#pvy', ov).onclick = () => RAPOR_IS.yaz();
+  $('#pvp', ov).onclick = () => RAPOR_IS.pdf();
+  $('#pvx', ov).onclick = () => RAPOR_IS.xls();
+  $('#pvk', ov).onclick = kapat;
+  return ov;
 }
 function zoomUygula() {
   try {
@@ -635,7 +685,7 @@ function ayarlar() {
     <div class="card"><h3>${icTile('download', 'green')}Yedekleme</h3><p class="hint">Program her gün ilk kayıtta otomatik yedek alır. Başka bilgisayara taşımak için yedeği USB belleğe kaydedin.</p>
       <div style="display:flex;flex-direction:column;gap:8px"><button class="btn" id="yv">${ic('download')}Yedeği Dışa Aktar</button><button class="btn" id="yy">${ic('upload')}Yedekten Geri Yükle</button><button class="btn" id="vk">${ic('folder')}Veri Klasörünü Aç</button></div></div>
     <div class="card"><h3>${icTile('lock', 'red')}Kullanıcı ve şifre</h3><p class="hint">Kullanıcı: <b>${esc(USER)}</b></p>
-      <div style="display:flex;flex-direction:column;gap:8px"><button class="btn" id="sd">${ic('lock')}Şifreyi Değiştir</button><button class="btn" id="kk">${ic('refresh')}Yeni Kurtarma Kodu Al</button></div></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><button class="btn" id="sd">${ic('lock')}Şifreyi Değiştir</button><button class="btn" id="kk">${ic('refresh')}Güvenlik Sorusunu Değiştir</button></div></div>
   </div>
   <div class="card hint">Veri dosyası: <b>${esc(INFO.veri)}</b><br>Kulüp Takip sürüm ${INFO.version} • ${INFO.platform === 'linux' ? 'Pardus / Linux' : 'Windows'} • Tüm veriler yalnızca bu bilgisayarda, Excel dosyasında saklanır.</div>`;
   $('#kayit').onclick = () => {
@@ -662,12 +712,18 @@ function ayarlar() {
   $('#sd').onclick = async () => {
     const ov = await modal('Şifreyi değiştir', `<div class="form"><label class="f full">Mevcut şifre<input class="inp" type="password" name="e"></label><label class="f">Yeni şifre<input class="inp" type="password" name="s1"></label><label class="f">Yeni şifre (tekrar)<input class="inp" type="password" name="s2"></label></div>`,
       [{ t: 'Vazgeç', v: null }, { t: 'Değiştir', cls: 'pri', check: async ov => { const u = D.users[0]; if (await ozet(val(ov, 'e'), u.salt) !== u.hash) { toast('Mevcut şifre hatalı.', 'err'); return false; } const h = sifreKontrol($('[name=s1]', ov).value, $('[name=s2]', ov).value); if (h) { toast(h, 'err'); return false; } return true; }, v: o => o }]);
-    if (!ov) return; const u = D.users[0]; u.salt = rastgele(16); u.hash = await ozet($('[name=s1]', ov).value, u.salt); degisti(); toast('Şifre değiştirildi.', 'ok');
+    if (!ov) return; const u = D.users[0], hat = hatirlandi(); u.salt = rastgele(16); u.hash = await ozet($('[name=s1]', ov).value, u.salt); hatirlaYaz(hat); degisti(); toast('Şifre değiştirildi.', 'ok');
   };
   $('#kk').onclick = async () => {
-    if (!await onayla('Yeni bir kurtarma kodu oluşturulacak; eski kod geçersiz olacak.', 'Oluştur')) return;
-    const u = D.users[0], kod = kurtarmaKodu(); u.kurtarmaSalt = rastgele(16); u.kurtarmaHash = await ozet(kod.replace('-', ''), u.kurtarmaSalt); degisti();
-    bilgi('Yeni kurtarma kodunuz', `<div class="code">${kod}</div><p class="hint">Lütfen not edin.</p>`);
+    const u = D.users[0];
+    const ov = await modal('Güvenlik sorusu', `<p class="hint">Şifrenizi unutursanız bu soru sorulur.${u.soru ? '' : ' Henüz güvenlik sorusu belirlenmemiş; şu an öğretmen adı ve sınıf ile şifre yenilenebiliyor.'}</p>
+      <div class="form"><label class="f full">Mevcut şifre<input class="inp" type="password" name="e"></label>
+      <label class="f full">Soru<select class="inp" name="soru">${SORULAR.map(s => `<option ${s === u.soru ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></label>
+      <label class="f full">Cevap<input class="inp" name="cevap"></label></div>`,
+      [{ t: 'Vazgeç', v: null }, { t: 'Kaydet', cls: 'pri', check: async ov => { if (await ozet(val(ov, 'e'), u.salt) !== u.hash) { toast('Mevcut şifre hatalı.', 'err'); return false; } if (cevapNorm(val(ov, 'cevap')).length < 2) { toast('Cevabı yazın.', 'err'); return false; } return true; }, v: o => o }]);
+    if (!ov) return;
+    u.soru = val(ov, 'soru'); u.cevapSalt = rastgele(16); u.cevapHash = await ozet(cevapNorm(val(ov, 'cevap')), u.cevapSalt);
+    degisti(); toast('Güvenlik sorusu kaydedildi.', 'ok');
   };
   updCiz();
 }
@@ -712,6 +768,7 @@ async function basla() {
   const st = D.settings;
   if (!st.okul || !st.sinif || !st.ogretmen) return kurulum(1);
   if (!D.users.length) return kurulum(2, true);
+  if (hatirlandi()) { USER = D.users[0].ad; return uygulama(); }
   girisEkrani();
 }
 
@@ -723,7 +780,7 @@ async function smoke() {
     kurulum(1); await shot('01_kurulum');
     const t = today(), y = L.varsayilanYil(t);
     Object.assign(D.settings, { okul: 'Atatürk İlkokulu', sinif: '2-B', ogretmen: 'Ayşe Yılmaz', kulup: 'Satranç Kulübü', mudur: 'Mehmet Demir', yil: y, ucret: 800, kardesIndirim: 50, sonOdemeGunu: 10, baslangicAy: `${y}-09` });
-    await kullaniciKur('ayse', '1234');
+    await kullaniciKur('ayse', '1234', SORULAR[1], 'Atatürk');
     const adlar = ['Ali Kaya', 'Zeynep Çelik', 'Şule Güneş', 'Ömer İnce', 'Elif Şahin', 'Mehmet Öztürk', 'Ayşe Doğan', 'Can Arslan', 'Defne Koç', 'Yusuf Aydın', 'Ece Kılıç', 'Emir Yıldız'];
     adlar.forEach((a, i) => D.students.push({ id: i + 1, no: String(100 + i), adSoyad: a, veliAd: 'Veli ' + a.split(' ')[1], veliTel: '0532 000 00 ' + L.pad(i), kardes: i === 1 || i === 6, kardesAd: i === 1 ? 'Can Çelik' : i === 6 ? 'Ali Doğan' : '', kardesSinif: i === 1 ? '4-A' : i === 6 ? '1-C' : '', burslu: i === 2, baslangicAy: i === 11 ? L.ayKey(t) : `${y}-09`, bitisAy: '', not: '' }));
     const aylar = L.yilAylari(y).filter(a => a <= L.ayKey(t));
@@ -732,6 +789,7 @@ async function smoke() {
     L.ayrildiIsaretle(D, D.students[9], aylar[Math.max(0, aylar.length - 2)]);
     dirty = true; if (!await kaydet()) throw new Error('kaydetme başarısız');
     girisEkrani(); await shot('02_giris');
+    sifreYenile(); await shot('02b_sifre_yenile');
     USER = 'ayse'; uygulama(); await shot('03_panel');
     for (const p of ['ogrenciler', 'yoklama', 'aidat', 'ayarlar']) { git(p); await shot('04_' + p); }
     git('raporlar');
@@ -743,6 +801,9 @@ async function smoke() {
       await api.exportExcel({ models: SON_MODELS, settings: D.settings, ad: 'test_' + tr.id, sor: false });
       if (['aylikAidat', 'aylikYoklama', 'toplu', 'mektup'].includes(tr.id)) await api.pdf({ html: SON_HTML, ad: 'test_' + tr.id, sor: false });
     }
+    RP.id = 'aylikAidat'; raporCiz(); await bekle(700);
+    const pv = baskiOnizleme(); await bekle(1200); await shot('06_baski_onizleme'); pv.remove();
+    log.push('baski onizleme: OK');
     const r = await api.load();
     if (!r.data || r.data.students.length !== 12 || r.data.payments.length !== D.payments.length || !r.data.users.length) throw new Error('geri okuma uyuşmuyor');
     log.push('kaydet/oku: OK ' + r.data.students.length + ' öğrenci, ' + r.data.payments.length + ' ödeme');

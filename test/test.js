@@ -77,7 +77,7 @@ function esit(a, b, ad) {
   esit(R.html(R.olustur('liste', B, {}, T), B.settings).sayfa >= 3, true, 'uzun liste birden çok sayfa');
 
   // kaydet / oku
-  D.users = [{ ad: 'ayse', salt: 'aa', hash: 'bb', kurtarmaSalt: 'cc', kurtarmaHash: 'dd' }];
+  D.users = [{ ad: 'ayse', salt: 'aa', hash: 'bb', soru: 'İlk okulunuzun adı nedir?', cevapSalt: 'cc', cevapHash: 'dd' }];
   const f = path.join(dir, 'KulupVerileri.xlsx');
   await store.save(f, D);
   const D2 = await store.load(f);
@@ -89,7 +89,7 @@ function esit(a, b, ad) {
   esit(D2.payments.length, 4, 'geri okuma: ödeme');
   esit(D2.monthFees['2026-12'], 900, 'geri okuma: aylık ücret');
   esit(D2.attendance['2026-11-25|2'], 'Gelmedi', 'geri okuma: yoklama');
-  esit(D2.users[0].ad, 'ayse', 'geri okuma: kullanıcı');
+  esit([D2.users[0].ad, D2.users[0].soru, D2.users[0].cevapHash], ['ayse', 'İlk okulunuzun adı nedir?', 'dd'], 'geri okuma: kullanıcı ve güvenlik sorusu');
 
   // sürüm 1 (Windows) veri dosyası
   const v1 = process.argv[2];

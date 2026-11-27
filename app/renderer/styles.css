@@ -156,3 +156,11 @@ table.tbl { width: 100%; border-collapse: collapse }
 .code { font-family: Consolas, "DejaVu Sans Mono", monospace; font-size: 28px; letter-spacing: 3px; background: var(--warn-bg); color: #8a5a06; padding: 16px; text-align: center; border-radius: 14px; font-weight: 900; border: 2px dashed #f0c36a }
 .err-msg { color: var(--bad); font-weight: 700; min-height: 18px }
 .link { color: var(--pri); cursor: pointer; background: none; border: 0; padding: 0; font-weight: 700 }
+
+/* ---------- baskı önizleme ---------- */
+.pv { position: fixed; inset: 0; z-index: 55; background: #4a4f58; display: flex; flex-direction: column }
+.pv-bar { display: flex; gap: 8px; align-items: center; padding: 12px 20px; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.25); flex-wrap: wrap }
+.pv-bar .sp { flex: 1 }
+.pv-t b { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 900 } .pv-t b svg { width: 22px; height: 22px; color: var(--pri) }
+.pv-t span { display: block; color: var(--muted); font-size: 13px; margin-top: 2px }
+.pv-frame { flex: 1; border: 0; width: 100%; background: #4a4f58 }
